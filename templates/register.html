@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Random Meal Planner{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>Create Account</h2>
+        <form id="registerForm" class="auth-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Choose a username (min 3 chars)"
+                    required
+                    minlength="3"
+                    autocomplete="username"
+                >
+                <small class="form-hint">3-20 characters, alphanumeric and underscore only</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="Enter your email"
+                    required
+                    autocomplete="email"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Create a password (min 6 chars)"
+                    required
+                    minlength="6"
+                    autocomplete="new-password"
+                >
+                <small class="form-hint">At least 6 characters with uppercase, lowercase, and numbers</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input 
+                    type="password" 
+                    id="confirmPassword" 
+                    name="confirm_password" 
+                    placeholder="Confirm your password"
+                    required
+                    minlength="6"
+                    autocomplete="new-password"
+                >
+            </div>
+
+            <div class="form-group checkbox">
+                <input 
+                    type="checkbox" 
+                    id="terms" 
+                    name="terms" 
+                    required
+                >
+                <label for="terms">I agree to the Terms and Conditions</label>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            <div id="successMessage" class="success-message" style="display: none;"></div>
+
+            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+
+        <p class="auth-link">
+            Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script>
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        handleRegister();
+    });
+</script>
+{% endblock %}

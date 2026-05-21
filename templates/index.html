@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Random Meal Planner{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>Welcome to Random Meal Planner</h1>
+        <p>Never run out of meal ideas! Get random meal suggestions and plan your week.</p>
+        {% if not is_logged_in %}
+            <div class="hero-buttons">
+                <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
+                <a href="{{ url_for('register') }}" class="btn btn-secondary">Create Account</a>
+            </div>
+        {% else %}
+            <div class="hero-buttons">
+                <button class="btn btn-primary" id="suggestMealBtn">Get Random Meal</button>
+                <button class="btn btn-secondary" id="myMealsBtn">View My Meals</button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_logged_in %}
+<div class="features-section">
+    <div class="container">
+        <h2>Your Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎲</div>
+                <h3>Random Meals</h3>
+                <p>Get random meal suggestions from thousands of recipes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>Weekly Plans</h3>
+                <p>Plan your meals for the entire week.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">❤️</div>
+                <h3>Save Favorites</h3>
+                <p>Save your favorite meals for quick access.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛒</div>
+                <h3>Shopping List</h3>
+                <p>Generate shopping lists from your meals.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="meal-suggestion-section" id="mealSuggestionSection" style="display: none;">
+    <div class="container">
+        <h2>Suggested Meal</h2>
+        <div class="meal-card" id="mealCard">
+            <img id="mealImage" src="" alt="Meal">
+            <h3 id="mealName"></h3>
+            <p id="mealCategory"></p>
+            <button id="refreshMealBtn" class="btn btn-primary">Get Another Meal</button>
+            <button id="saveMealBtn" class="btn btn-secondary">Save Meal</button>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="features-section">
+    <div class="container">
+        <h2>Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎲</div>
+                <h3>Random Meals</h3>
+                <p>Get random meal suggestions from thousands of recipes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>Weekly Plans</h3>
+                <p>Plan your meals for the entire week.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">❤️</div>
+                <h3>Save Favorites</h3>
+                <p>Save your favorite meals for quick access.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛒</div>
+                <h3>Shopping List</h3>
+                <p>Generate shopping lists from your meals.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+{% endblock %}
