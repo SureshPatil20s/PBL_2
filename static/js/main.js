@@ -24,15 +24,30 @@ function showSuccess(message, elementId = 'successMessage') {
     }
 }
 
+function getCookie(name) {
+    const cookie = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith(`${name}=`));
+    return cookie ? decodeURIComponent(cookie.substring(name.length + 1)) : null;
+}
+
 // Make API request
 async function apiRequest(url, method = 'GET', data = null) {
+    const normalizedMethod = method.toUpperCase();
     const options = {
-        method: method,
+        method: normalizedMethod,
         credentials: 'same-origin',
         headers: {
             'Content-Type': 'application/json',
         }
     };
+
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(normalizedMethod)) {
+        const csrfToken = getCookie('csrf_access_token');
+        if (csrfToken) {
+            options.headers['X-CSRF-TOKEN'] = csrfToken;
+        }
+    }
 
     if (data) {
         options.body = JSON.stringify(data);

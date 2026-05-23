@@ -1,65 +1,195 @@
 // Home Page JavaScript
 
-// Get random meal from TheMealDB API
-async function getRandomMeal() {
-    const mealSuggestionSection = document.getElementById('mealSuggestionSection');
-    if (!mealSuggestionSection) return;
+async function getMealSuggestion(event) {
+    if (event) {
+        event.preventDefault();
+    }
+
+    const preferences = getPreferences();
+    if (!preferences) return;
 
     try {
-        // Fetch random meal from TheMealDB API
-        const response = await fetch('https://www.themealdb.com/api/json/v1/1/random.php');
-        if (!response.ok) throw new Error('Failed to fetch meal');
+        setDashboardDisabled(true);
+        const response = await apiRequest('/api/meal-suggestion', 'POST', preferences);
 
-        const data = await response.json();
-        if (data.meals && data.meals.length > 0) {
-            const meal = data.meals[0];
-            displayMeal(meal);
-            mealSuggestionSection.style.display = 'block';
+        if (response.ok && response.data.meal) {
+            displayMeal(response.data.meal);
+            showSection('mealSuggestionSection');
+            hideRecipe();
+        } else {
+            showError(response.data.message || 'Failed to fetch meal suggestion');
         }
     } catch (error) {
-        console.error('Error fetching meal:', error);
+        console.error('Meal suggestion error:', error);
         showError('Failed to fetch meal suggestion. Please try again.');
+    } finally {
+        setDashboardDisabled(false);
     }
 }
 
-// Display meal in the meal card
-function displayMeal(meal) {
-    document.getElementById('mealImage').src = meal.strMealThumb;
-    document.getElementById('mealImage').alt = meal.strMeal;
-    document.getElementById('mealName').textContent = meal.strMeal;
-    document.getElementById('mealCategory').textContent = `Category: ${meal.strCategory} | Area: ${meal.strArea}`;
+function getPreferences() {
+    const timing = document.getElementById('mealTiming').value;
+    const calorieMin = Number(document.getElementById('calorieMin').value);
+    const calorieMax = Number(document.getElementById('calorieMax').value);
+    const style = document.getElementById('mealStyle').value;
 
-    // Store current meal for saving
+    if (!timing || !calorieMin || !calorieMax) {
+        showError('Please fill in timing and calorie range');
+        return null;
+    }
+
+    return {
+        timing: timing,
+        calorie_min: calorieMin,
+        calorie_max: calorieMax,
+        style: style
+    };
+}
+
+function displayMeal(meal) {
+    document.getElementById('mealImage').src = meal.thumbnail_url || '';
+    document.getElementById('mealImage').alt = meal.name || 'Meal';
+    document.getElementById('mealName').textContent = meal.name || 'Meal suggestion';
+    document.getElementById('mealCategory').textContent =
+        `Category: ${meal.category || 'Unknown'} | Area: ${meal.area || 'Unknown'}`;
+    document.getElementById('mealMeta').textContent =
+        `${meal.timing || 'Meal'} | ${meal.style || 'Any style'} | About ${meal.estimated_calories || 'N/A'} calories`;
+
     window.currentMeal = meal;
 }
 
-// Save meal to user's account (for future implementation)
-async function saveMeal() {
+function viewRecipe() {
     if (!window.currentMeal) return;
 
-    const user = await getCurrentUser();
-    if (!user) {
-        showError('Please log in to save meals');
+    const recipePanel = document.getElementById('recipePanel');
+    const recipeIngredients = document.getElementById('recipeIngredients');
+    const recipeInstructions = document.getElementById('recipeInstructions');
+
+    const ingredients = window.currentMeal.ingredients || [];
+    recipeIngredients.innerHTML = ingredients.length
+        ? `<ul>${ingredients.map((item) => `
+            <li>${escapeHtml(item.measure)} ${escapeHtml(item.ingredient)}</li>
+        `).join('')}</ul>`
+        : '<p>No ingredients found.</p>';
+
+    recipeInstructions.textContent =
+        window.currentMeal.instructions || 'No cooking instructions were found for this meal.';
+
+    recipePanel.style.display = 'block';
+    recipePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideRecipe() {
+    const recipePanel = document.getElementById('recipePanel');
+    if (recipePanel) {
+        recipePanel.style.display = 'none';
+    }
+}
+
+async function saveMeal() {
+    if (!window.currentMeal) {
+        showError('Get a meal suggestion before saving');
         return;
     }
 
-    // This would save to database in a full implementation
-    showSuccess('Meal saved to your collection!');
+    const response = await apiRequest('/api/meals', 'POST', {
+        meal: window.currentMeal
+    });
+
+    if (response.ok) {
+        showSuccess(response.data.message || 'Meal saved');
+        loadSavedMeals(false);
+    } else {
+        showError(response.data.message || 'Failed to save meal');
+    }
 }
 
-// Event listeners
+async function loadSavedMeals(shouldShowSection = true) {
+    const myMealsSection = document.getElementById('myMealsSection');
+    const savedMealsGrid = document.getElementById('savedMealsGrid');
+    if (!myMealsSection || !savedMealsGrid) return;
+
+    const response = await apiRequest('/api/meals');
+    if (!response.ok) {
+        showError(response.data.message || 'Failed to load saved meals');
+        return;
+    }
+
+    renderSavedMeals(response.data.meals || []);
+    if (shouldShowSection) {
+        showSection('myMealsSection');
+    }
+}
+
+function renderSavedMeals(meals) {
+    const savedMealsGrid = document.getElementById('savedMealsGrid');
+    if (!savedMealsGrid) return;
+
+    if (!meals.length) {
+        savedMealsGrid.innerHTML = '<p class="empty-meals">No saved meals yet.</p>';
+        return;
+    }
+
+    savedMealsGrid.innerHTML = meals.map((meal) => `
+        <article class="saved-meal">
+            <img src="${escapeHtml(meal.thumbnail_url || '')}" alt="${escapeHtml(meal.name)}">
+            <div class="saved-meal-content">
+                <h3>${escapeHtml(meal.name)}</h3>
+                <p>${escapeHtml(meal.timing || 'Meal')} | ${escapeHtml(meal.style || 'Any style')}</p>
+                <p>${escapeHtml(meal.category || 'Unknown')} | ${escapeHtml(meal.area || 'Unknown')}</p>
+                <p>About ${escapeHtml(meal.estimated_calories || 'N/A')} calories</p>
+                <p>Saved ${escapeHtml(formatDate(meal.created_at))}</p>
+                <button class="btn btn-secondary remove-meal-btn" data-meal-id="${meal.id}">Delete</button>
+            </div>
+        </article>
+    `).join('');
+}
+
+async function removeSavedMeal(mealId) {
+    const response = await apiRequest(`/api/meals/${mealId}`, 'DELETE');
+    if (response.ok) {
+        showSuccess(response.data.message || 'Meal deleted');
+        loadSavedMeals(false);
+    } else {
+        showError(response.data.message || 'Failed to delete meal');
+    }
+}
+
+function showSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function setDashboardDisabled(disabled) {
+    ['suggestMealBtn', 'myMealsBtn', 'viewRecipeBtn', 'saveMealBtn'].forEach((id) => {
+        const button = document.getElementById(id);
+        if (button) {
+            button.disabled = disabled;
+        }
+    });
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value || '';
+    return div.innerHTML;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    const suggestMealBtn = document.getElementById('suggestMealBtn');
-    const refreshMealBtn = document.getElementById('refreshMealBtn');
+    const mealPreferenceForm = document.getElementById('mealPreferenceForm');
+    const viewRecipeBtn = document.getElementById('viewRecipeBtn');
     const saveMealBtn = document.getElementById('saveMealBtn');
     const myMealsBtn = document.getElementById('myMealsBtn');
 
-    if (suggestMealBtn) {
-        suggestMealBtn.addEventListener('click', getRandomMeal);
+    if (mealPreferenceForm) {
+        mealPreferenceForm.addEventListener('submit', getMealSuggestion);
     }
 
-    if (refreshMealBtn) {
-        refreshMealBtn.addEventListener('click', getRandomMeal);
+    if (viewRecipeBtn) {
+        viewRecipeBtn.addEventListener('click', viewRecipe);
     }
 
     if (saveMealBtn) {
@@ -67,28 +197,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (myMealsBtn) {
-        myMealsBtn.addEventListener('click', function() {
-            // Placeholder for navigating to my meals page
-            alert('My Meals feature coming soon!');
-        });
+        myMealsBtn.addEventListener('click', () => loadSavedMeals(true));
     }
 
-    // Add hover effects to feature cards
-    const featureCards = document.querySelectorAll('.feature-card');
-    featureCards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-        });
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-meal-btn')) {
+            removeSavedMeal(event.target.dataset.mealId);
+        }
     });
-});
 
-// Add loading indicator for meal fetching
-function showMealLoading() {
-    const mealCard = document.getElementById('mealCard');
-    if (mealCard) {
-        mealCard.innerHTML = '<div class="meal-loading">Loading meal suggestion...</div>';
+    const myMealsNavLink = document.querySelector('a[href="#myMealsSection"]');
+    if (myMealsNavLink) {
+        myMealsNavLink.addEventListener('click', function(event) {
+            event.preventDefault();
+            loadSavedMeals(true);
+        });
     }
-}
+});

@@ -5,7 +5,6 @@ from flask_jwt_extended import (
     JWTManager,
     create_access_token,
     get_jwt_identity,
-    jwt_required,
     set_access_cookies,
     unset_jwt_cookies,
     verify_jwt_in_request,
@@ -13,6 +12,7 @@ from flask_jwt_extended import (
 from flask_jwt_extended.exceptions import JWTExtendedException
 from jwt.exceptions import PyJWTError
 from models import db, User
+from api import api_bp
 import secrets
 
 app = Flask(__name__)
@@ -25,11 +25,12 @@ app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_SECURE'] = False
 app.config['JWT_COOKIE_HTTPONLY'] = True
 app.config['JWT_COOKIE_SAMESITE'] = 'Lax'
-app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+app.config['JWT_COOKIE_CSRF_PROTECT'] = True
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 
 db.init_app(app)
 jwt = JWTManager(app)
+app.register_blueprint(api_bp)
 
 with app.app_context():
     db.create_all()
@@ -130,25 +131,6 @@ def logout():
     response = redirect(url_for('home'))
     unset_jwt_cookies(response)
     return response
-
-
-@app.route('/api/user')
-@jwt_required(optional=True)
-def get_user_info():
-    """Get current logged-in user info."""
-    user_id = get_jwt_identity()
-    if not user_id:
-        return jsonify({'user': None})
-
-    try:
-        user = db.session.get(User, int(user_id))
-    except (TypeError, ValueError):
-        return jsonify({'user': None})
-
-    if user:
-        return jsonify({'user': user.to_dict()})
-
-    return jsonify({'user': None})
 
 
 @app.errorhandler(404)

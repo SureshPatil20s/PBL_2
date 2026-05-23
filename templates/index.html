@@ -1,52 +1,73 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Random Meal Planner{% endblock %}
+{% block title %}Dashboard - Random Meal Planner{% endblock %}
 
 {% block content %}
 <div class="hero-section">
     <div class="hero-content">
-        <h1>Welcome to Random Meal Planner</h1>
-        <p>Never run out of meal ideas! Get random meal suggestions and plan your week.</p>
+        <h1>Meal Planner Dashboard</h1>
+        <p>Choose your meal timing, calorie target, and food style.</p>
         {% if not is_logged_in %}
             <div class="hero-buttons">
                 <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
                 <a href="{{ url_for('register') }}" class="btn btn-secondary">Create Account</a>
-            </div>
-        {% else %}
-            <div class="hero-buttons">
-                <button class="btn btn-primary" id="suggestMealBtn">Get Random Meal</button>
-                <button class="btn btn-secondary" id="myMealsBtn">View My Meals</button>
             </div>
         {% endif %}
     </div>
 </div>
 
 {% if is_logged_in %}
-<div class="features-section">
+<div class="status-messages">
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="successMessage" class="success-message" style="display: none;"></div>
+</div>
+
+<div class="dashboard-section">
     <div class="container">
-        <h2>Your Features</h2>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🎲</div>
-                <h3>Random Meals</h3>
-                <p>Get random meal suggestions from thousands of recipes.</p>
+        <form id="mealPreferenceForm" class="dashboard-form">
+            <div class="form-group">
+                <label for="mealTiming">Meal timing</label>
+                <select id="mealTiming" name="timing" required>
+                    <option value="">Choose timing</option>
+                    <option value="Breakfast">Breakfast</option>
+                    <option value="Lunch">Lunch</option>
+                    <option value="Snack">Snack</option>
+                    <option value="Dinner">Dinner</option>
+                </select>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">📅</div>
-                <h3>Weekly Plans</h3>
-                <p>Plan your meals for the entire week.</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="calorieMin">Min calories</label>
+                    <input type="number" id="calorieMin" name="calorie_min" min="1" placeholder="300" required>
+                </div>
+                <div class="form-group">
+                    <label for="calorieMax">Max calories</label>
+                    <input type="number" id="calorieMax" name="calorie_max" min="1" placeholder="700" required>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">❤️</div>
-                <h3>Save Favorites</h3>
-                <p>Save your favorite meals for quick access.</p>
+
+            <div class="form-group">
+                <label for="mealStyle">Food style</label>
+                <select id="mealStyle" name="style" required>
+                    <option value="Any">Any</option>
+                    <option value="North Indian">North Indian</option>
+                    <option value="South Indian">South Indian</option>
+                    <option value="Chinese">Chinese</option>
+                    <option value="Italian">Italian</option>
+                    <option value="Japanese">Japanese</option>
+                    <option value="Mexican">Mexican</option>
+                    <option value="Thai">Thai</option>
+                    <option value="American">American</option>
+                    <option value="British">British</option>
+                </select>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">🛒</div>
-                <h3>Shopping List</h3>
-                <p>Generate shopping lists from your meals.</p>
+
+            <div class="dashboard-actions">
+                <button type="submit" class="btn btn-primary" id="suggestMealBtn">Get Meal</button>
+                <button type="button" class="btn btn-secondary" id="myMealsBtn">View My Meals</button>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -57,37 +78,28 @@
             <img id="mealImage" src="" alt="Meal">
             <h3 id="mealName"></h3>
             <p id="mealCategory"></p>
-            <button id="refreshMealBtn" class="btn btn-primary">Get Another Meal</button>
+            <p id="mealMeta"></p>
+            <button id="viewRecipeBtn" class="btn btn-primary">View Recipe</button>
             <button id="saveMealBtn" class="btn btn-secondary">Save Meal</button>
+        </div>
+        <div class="recipe-panel" id="recipePanel" style="display: none;">
+            <h3>How to cook</h3>
+            <div id="recipeIngredients"></div>
+            <p id="recipeInstructions"></p>
         </div>
     </div>
 </div>
-{% else %}
-<div class="features-section">
+
+<div class="my-meals-section" id="myMealsSection" style="display: none;">
     <div class="container">
-        <h2>Features</h2>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🎲</div>
-                <h3>Random Meals</h3>
-                <p>Get random meal suggestions from thousands of recipes.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📅</div>
-                <h3>Weekly Plans</h3>
-                <p>Plan your meals for the entire week.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">❤️</div>
-                <h3>Save Favorites</h3>
-                <p>Save your favorite meals for quick access.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🛒</div>
-                <h3>Shopping List</h3>
-                <p>Generate shopping lists from your meals.</p>
-            </div>
-        </div>
+        <h2>My Meals</h2>
+        <div class="saved-meals-grid" id="savedMealsGrid"></div>
+    </div>
+</div>
+{% else %}
+<div class="dashboard-section">
+    <div class="container">
+        <p class="empty-meals">Login or create an account to get meal suggestions and save your recipes.</p>
     </div>
 </div>
 {% endif %}

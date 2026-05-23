@@ -16,7 +16,7 @@
             <ul class="navbar-menu" id="navbarMenu">
                 <li><a href="{{ url_for('home') }}" class="nav-link">Home</a></li>
                 {% if is_logged_in %}
-                    <li><a href="#" class="nav-link">My Meals</a></li>
+                    <li><a href="#myMealsSection" class="nav-link">My Meals</a></li>
                     <li><a href="{{ url_for('logout') }}" class="nav-link logout-btn">Logout</a></li>
                 {% else %}
                     <li><a href="{{ url_for('login') }}" class="nav-link">Login</a></li>
