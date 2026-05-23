@@ -130,6 +130,11 @@ function renderSavedMeals(meals) {
         return;
     }
 
+    window.savedMealsById = {};
+    meals.forEach((meal) => {
+        window.savedMealsById[String(meal.id)] = meal;
+    });
+
     savedMealsGrid.innerHTML = meals.map((meal) => `
         <article class="saved-meal">
             <img src="${escapeHtml(meal.thumbnail_url || '')}" alt="${escapeHtml(meal.name)}">
@@ -139,10 +144,35 @@ function renderSavedMeals(meals) {
                 <p>${escapeHtml(meal.category || 'Unknown')} | ${escapeHtml(meal.area || 'Unknown')}</p>
                 <p>About ${escapeHtml(meal.estimated_calories || 'N/A')} calories</p>
                 <p>Saved ${escapeHtml(formatDate(meal.created_at))}</p>
+                <button class="btn btn-primary saved-recipe-btn" data-meal-id="${meal.id}">View Recipe</button>
                 <button class="btn btn-secondary remove-meal-btn" data-meal-id="${meal.id}">Delete</button>
+                <div class="saved-recipe-details" id="savedRecipe-${meal.id}" style="display: none;"></div>
             </div>
         </article>
     `).join('');
+}
+
+function toggleSavedRecipe(mealId) {
+    const meal = window.savedMealsById && window.savedMealsById[String(mealId)];
+    const details = document.getElementById(`savedRecipe-${mealId}`);
+    if (!meal || !details) return;
+
+    if (details.style.display === 'block') {
+        details.style.display = 'none';
+        return;
+    }
+
+    const ingredients = meal.ingredients || [];
+    details.innerHTML = `
+        <h4>How to cook</h4>
+        ${ingredients.length ? `
+            <ul>${ingredients.map((item) => `
+                <li>${escapeHtml(item.measure)} ${escapeHtml(item.ingredient)}</li>
+            `).join('')}</ul>
+        ` : '<p>No ingredients found.</p>'}
+        <p>${escapeHtml(meal.instructions || 'No cooking instructions were found for this meal.')}</p>
+    `;
+    details.style.display = 'block';
 }
 
 async function removeSavedMeal(mealId) {
@@ -201,6 +231,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('saved-recipe-btn')) {
+            toggleSavedRecipe(event.target.dataset.mealId);
+        }
+
         if (event.target.classList.contains('remove-meal-btn')) {
             removeSavedMeal(event.target.dataset.mealId);
         }

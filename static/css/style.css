@@ -474,9 +474,33 @@ button:disabled {
     margin-bottom: 0.5rem;
 }
 
+.saved-recipe-btn,
 .remove-meal-btn {
     margin-top: 0.5rem;
     width: 100%;
+}
+
+.saved-recipe-details {
+    background: white;
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+    padding: 1rem;
+}
+
+.saved-recipe-details h4 {
+    margin-bottom: 0.75rem;
+}
+
+.saved-recipe-details ul {
+    margin: 0 0 1rem 1.25rem;
+}
+
+.saved-recipe-details li {
+    margin-bottom: 0.25rem;
+}
+
+.saved-recipe-details p {
+    white-space: pre-line;
 }
 
 .empty-meals {
