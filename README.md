@@ -1,242 +1,143 @@
-# Random Meal Planner - Flask Web Application
+# Random Meal Planner
 
-A modern, responsive Flask web application for discovering and planning random meals. Features user authentication, meal suggestions from TheMealDB API, and a clean, intuitive user interface.
+A Flask web application where users can register, log in, get meal suggestions, view cooking instructions, and save meals to their personal history.
 
-## Features
+## How It Works
 
-- **User Authentication**
-  - User registration with email validation
-  - Secure login/logout functionality
-  - Password hashing with Werkzeug security
-  - Session management
+1. A user registers or logs in.
+2. The backend creates a JWT access token and stores it in secure HTTP-only cookies.
+3. The dashboard asks the user for:
+   - meal timing: breakfast, lunch, snack, or dinner
+   - calorie target: minimum and maximum calories
+   - food style: North Indian, Chinese, Italian, Japanese, South Indian, etc.
+4. The frontend sends those choices to the Flask API.
+5. The backend fetches meal data from TheMealDB, normalizes the response, adds preference metadata, and returns one meal suggestion.
+6. The user can:
+   - view the recipe/instructions
+   - save the meal
+   - view saved meals history
+   - delete saved meals
 
-- **Home Page**
-  - Hero section with call-to-action buttons
-  - Feature showcase cards
-  - Random meal suggestions (for logged-in users)
-  - Beautiful responsive design
+Note: TheMealDB does not provide calorie data, so calories are estimated using a simple backend calculation.
 
-- **Random Meal Planner**
-  - Integration with TheMealDB API
-  - Get random meal suggestions with images
-  - Save favorite meals (foundation for future expansion)
-  - Meal category and area information
+## System Architecture
 
-- **Responsive Design**
-  - Mobile-first approach
-  - Works seamlessly on all devices
-  - Modern, gradient-based UI
-
-## Project Structure
-
-```
-PBL_2/
-├── server.py              # Main Flask application
-├── models.py              # SQLAlchemy database models
-├── requirements.txt       # Python dependencies
-├── static/
-│   ├── css/
-│   │   └── style.css     # All styling
-│   └── js/
-│       ├── main.js       # Main JavaScript functions
-│       ├── auth.js       # Authentication logic
-│       └── home.js       # Home page functionality
-├── templates/
-│   ├── base.html         # Base template with navbar
-│   ├── index.html        # Home page
-│   ├── login.html        # Login page
-│   ├── register.html     # Registration page
-│   ├── 404.html          # 404 error page
-│   └── 500.html          # 500 error page
-└── meal_planner.db       # SQLite database (created on first run)
+```text
+Browser UI
+  |
+  | HTML/CSS/Vanilla JS
+  | JWT cookies + CSRF header
+  v
+Flask App: server.py
+  |
+  | registers routes, auth, database, API blueprint
+  v
+API Layer: api.py
+  |
+  | protected /api/* endpoints
+  | meal suggestion, save, list, delete
+  v
+Database Models: models.py
+  |
+  | SQLAlchemy ORM
+  v
+SQLite Database
 ```
 
-## Installation
+## Main Files
 
-### Prerequisites
-- Python 3.8 or higher
-- pip (Python package manager)
+- `server.py`: Creates the Flask app, configures JWT auth, handles login/register/logout, and registers the API blueprint.
+- `api.py`: Contains JWT-protected API endpoints for user info, meal suggestions, saved meals, and deleting meals.
+- `models.py`: Defines the database schema for users and saved meals.
+- `templates/`: Contains Flask HTML templates.
+- `static/js/`: Contains frontend logic for auth, dashboard actions, messages, and API calls.
+- `static/css/style.css`: Contains all frontend styling.
 
-### Setup Steps
+## Database Schema
 
-1. **Clone/Navigate to the project**
-   ```bash
-   cd PBL_2
-   ```
+### `users`
 
-2. **Create a virtual environment** (recommended)
-   ```bash
-   python -m venv venv
-   ```
+Stores account information:
 
-3. **Activate the virtual environment**
-   
-   **Windows:**
-   ```bash
-   venv\Scripts\activate
-   ```
-   
-   **macOS/Linux:**
-   ```bash
-   source venv/bin/activate
-   ```
+- `id`
+- `username`
+- `email`
+- `password_hash`
+- `created_at`
 
-4. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### `saved_meals`
 
-5. **Run the application**
-   ```bash
-   python server.py
-   ```
+Stores each user's saved meal history:
 
-6. **Access the application**
-   - Open your browser and navigate to: `http://localhost:5000`
+- `id`
+- `user_id`
+- `mealdb_id`
+- `name`
+- `category`
+- `area`
+- `thumbnail_url`
+- `instructions`
+- `source_url`
+- `youtube_url`
+- `ingredients`
+- `timing`
+- `style`
+- `calorie_min`
+- `calorie_max`
+- `estimated_calories`
+- `created_at`
 
-## Usage
+## API Overview
 
-### Creating an Account
-1. Click the "Register" button on the home page
-2. Fill in your username (min 3 characters), email, and password (min 6 characters)
-3. Click "Create Account"
-4. You'll be automatically logged in
+### Auth Routes
 
-### Logging In
-1. Click the "Login" button on the home page
-2. Enter your username and password
-3. Click "Login"
+- `POST /login`: Logs in a user and sets JWT cookies.
+- `POST /register`: Creates a user and sets JWT cookies.
+- `GET /logout`: Clears JWT cookies.
 
-### Getting Meal Suggestions
-1. Make sure you're logged in
-2. Click "Get Random Meal" on the home page
-3. A random meal will be displayed with an image and details
-4. Click "Get Another Meal" to fetch a different meal
-5. Click "Save Meal" to save it to your collection (for future expansion)
+### Protected API Routes
 
-## Database
+All `/api/*` routes require JWT authentication.
 
-The application uses SQLite for data persistence. The database file (`meal_planner.db`) is automatically created on first run. The database includes:
+- `GET /api/user`: Returns the current user.
+- `POST /api/meal-suggestion`: Returns a meal suggestion based on dashboard inputs.
+- `GET /api/meals`: Returns saved meals for the logged-in user.
+- `POST /api/meals`: Saves a meal for the logged-in user.
+- `DELETE /api/meals/<meal_id>`: Deletes one saved meal owned by the logged-in user.
 
-- **Users Table**: Stores user accounts with hashed passwords, email, and creation date
+## Frontend Flow
 
-## Security Features
+- `main.js` handles shared API requests, JWT cookie credentials, CSRF headers, and success/error/loading messages.
+- `auth.js` handles login and registration forms.
+- `home.js` handles the dashboard:
+  - getting meal suggestions
+  - showing recipe instructions
+  - saving meals
+  - loading saved meals
+  - expanding saved recipes
+  - deleting saved meals
 
-- Password hashing using Werkzeug
-- Session management with secure cookies
-- CSRF protection ready (can be enabled)
-- Input validation on both client and server side
-- Email validation
+## Run The Project
 
-## API Endpoints
-
-### Authentication
-- `POST /login` - Login user (JSON)
-- `POST /register` - Register new user (JSON)
-- `GET /logout` - Logout user
-
-### Pages
-- `GET /` - Home page
-- `GET /login` - Login page
-- `GET /register` - Registration page
-
-### API
-- `GET /api/user` - Get current user information
-
-## Technologies Used
-
-### Backend
-- **Flask** - Web framework
-- **Flask-SQLAlchemy** - ORM for database operations
-- **SQLAlchemy** - Database toolkit
-- **Werkzeug** - WSGI utilities and security
-
-### Frontend
-- **HTML5** - Markup
-- **CSS3** - Styling with gradients and animations
-- **Vanilla JavaScript** - Interactivity
-- **TheMealDB API** - Meal data source
-
-## Future Enhancements
-
-1. **Meal Saving System**
-   - Save favorite meals to user profile
-   - View saved meals history
-
-2. **Weekly Meal Planning**
-   - Create weekly meal plans
-   - Add meals to specific days
-
-3. **Shopping List Generator**
-   - Generate shopping lists from planned meals
-   - Export to PDF
-
-4. **User Profile**
-   - Edit profile information
-   - Change password
-   - Account settings
-
-5. **Advanced Search**
-   - Filter meals by cuisine
-   - Search by ingredients
-   - Dietary restrictions
-
-6. **Social Features**
-   - Share meal plans with friends
-   - Rate and review meals
-   - Community meal suggestions
-
-## Troubleshooting
-
-### Database Issues
-If you encounter database errors, delete `meal_planner.db` and run the app again. It will create a fresh database.
-
-### Port Already in Use
-If port 5000 is already in use, modify the port in `server.py`:
-```python
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)  # Change 5000 to 5001
-```
-
-### Module Import Errors
-Make sure your virtual environment is activated and all dependencies are installed:
 ```bash
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+python server.py
 ```
 
-## Configuration
+Open:
 
-Edit `server.py` to modify:
-- Database URI: `SQLALCHEMY_DATABASE_URI`
-- Debug mode: `debug=True` (set to False in production)
-- Host and port: `host='0.0.0.0', port=5000`
-- Session settings: `SESSION_COOKIE_*` variables
-
-## Deployment
-
-For production deployment:
-1. Set `debug=False` in server.py
-2. Use a production WSGI server (Gunicorn, uWSGI)
-3. Set `SESSION_COOKIE_SECURE=True` (requires HTTPS)
-4. Use environment variables for sensitive configuration
-5. Set a strong `SECRET_KEY`
-
-Example with Gunicorn:
-```bash
-gunicorn -w 4 -b 0.0.0.0:5000 server:app
+```text
+http://localhost:5000
 ```
 
-## License
+## Tech Stack
 
-This project is open source and available for educational purposes.
-
-## Support
-
-For issues or questions, please check the code comments or refer to the documentation of the respective libraries:
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
-- [TheMealDB API](https://www.themealdb.com/api.php)
-
----
-
-**Enjoy planning your meals!** 🍽️
+- Flask
+- Flask-JWT-Extended
+- Flask-SQLAlchemy
+- SQLite
+- Vanilla JavaScript
+- HTML/CSS
+- TheMealDB API
