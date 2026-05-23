@@ -10,12 +10,15 @@ async function getMealSuggestion(event) {
 
     try {
         setDashboardDisabled(true);
+        setButtonText('suggestMealBtn', 'Finding meal...');
+        showInfo('Finding a meal that matches your choices...');
         const response = await apiRequest('/api/meal-suggestion', 'POST', preferences);
 
         if (response.ok && response.data.meal) {
             displayMeal(response.data.meal);
             showSection('mealSuggestionSection');
             hideRecipe();
+            showSuccess('Meal suggestion ready. You can view the recipe or save it.');
         } else {
             showError(response.data.message || 'Failed to fetch meal suggestion');
         }
@@ -24,6 +27,7 @@ async function getMealSuggestion(event) {
         showError('Failed to fetch meal suggestion. Please try again.');
     } finally {
         setDashboardDisabled(false);
+        setButtonText('suggestMealBtn', 'Get Meal');
     }
 }
 
@@ -92,32 +96,62 @@ async function saveMeal() {
         return;
     }
 
+    setButtonText('saveMealBtn', 'Saving...');
+    setDashboardDisabled(true);
+    showInfo('Saving meal to your history...');
     const response = await apiRequest('/api/meals', 'POST', {
         meal: window.currentMeal
     });
 
     if (response.ok) {
-        showSuccess(response.data.message || 'Meal saved');
-        loadSavedMeals(false);
+        showSuccess(response.data.message || 'Meal added successfully');
+        await loadSavedMeals(false, true);
     } else {
         showError(response.data.message || 'Failed to save meal');
     }
+
+    setDashboardDisabled(false);
+    setButtonText('saveMealBtn', 'Save Meal');
 }
 
-async function loadSavedMeals(shouldShowSection = true) {
+async function loadSavedMeals(shouldShowSection = true, quiet = false) {
     const myMealsSection = document.getElementById('myMealsSection');
     const savedMealsGrid = document.getElementById('savedMealsGrid');
     if (!myMealsSection || !savedMealsGrid) return;
 
+    if (!quiet) {
+        setButtonText('myMealsBtn', 'Loading meals...');
+        setDashboardDisabled(true);
+        showInfo('Loading your saved meals...');
+    }
+
+    if (shouldShowSection) {
+        myMealsSection.style.display = 'block';
+        savedMealsGrid.innerHTML = '<p class="empty-meals">Loading saved meals...</p>';
+    }
+
     const response = await apiRequest('/api/meals');
     if (!response.ok) {
         showError(response.data.message || 'Failed to load saved meals');
+        if (!quiet) {
+            setDashboardDisabled(false);
+            setButtonText('myMealsBtn', 'View My Meals');
+        }
         return;
     }
 
     renderSavedMeals(response.data.meals || []);
+    if (!quiet) {
+        showSuccess('Saved meals loaded.');
+    }
+
     if (shouldShowSection) {
         showSection('myMealsSection');
+    }
+
+    if (!quiet) {
+        setDashboardDisabled(false);
+        setButtonText('myMealsBtn', 'View My Meals');
     }
 }
 
@@ -176,10 +210,11 @@ function toggleSavedRecipe(mealId) {
 }
 
 async function removeSavedMeal(mealId) {
+    showInfo('Deleting meal from your history...');
     const response = await apiRequest(`/api/meals/${mealId}`, 'DELETE');
     if (response.ok) {
-        showSuccess(response.data.message || 'Meal deleted');
-        loadSavedMeals(false);
+        showSuccess(response.data.message || 'Meal deleted successfully');
+        await loadSavedMeals(false, true);
     } else {
         showError(response.data.message || 'Failed to delete meal');
     }
@@ -200,6 +235,13 @@ function setDashboardDisabled(disabled) {
             button.disabled = disabled;
         }
     });
+}
+
+function setButtonText(buttonId, text) {
+    const button = document.getElementById(buttonId);
+    if (button) {
+        button.textContent = text;
+    }
 }
 
 function escapeHtml(value) {

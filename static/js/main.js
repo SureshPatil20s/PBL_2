@@ -4,6 +4,8 @@
 function showError(message, elementId = 'errorMessage') {
     const errorEl = document.getElementById(elementId);
     if (errorEl) {
+        hideMessage('infoMessage');
+        hideMessage('successMessage');
         errorEl.textContent = message;
         errorEl.style.display = 'block';
         setTimeout(() => {
@@ -16,11 +18,30 @@ function showError(message, elementId = 'errorMessage') {
 function showSuccess(message, elementId = 'successMessage') {
     const successEl = document.getElementById(elementId);
     if (successEl) {
+        hideMessage('infoMessage');
+        hideMessage('errorMessage');
         successEl.textContent = message;
         successEl.style.display = 'block';
         setTimeout(() => {
             successEl.style.display = 'none';
         }, 5000);
+    }
+}
+
+function showInfo(message, elementId = 'infoMessage') {
+    const infoEl = document.getElementById(elementId);
+    if (infoEl) {
+        hideMessage('errorMessage');
+        hideMessage('successMessage');
+        infoEl.textContent = message;
+        infoEl.style.display = 'block';
+    }
+}
+
+function hideMessage(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.style.display = 'none';
     }
 }
 

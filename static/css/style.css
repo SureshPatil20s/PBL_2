@@ -307,6 +307,15 @@ button:disabled {
     margin-bottom: 1rem;
 }
 
+.info-message {
+    padding: 1rem;
+    background-color: #EAF4FF;
+    color: #21618C;
+    border-left: 4px solid #3498DB;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
 .status-messages {
     max-width: 760px;
     margin: 2rem auto 0;

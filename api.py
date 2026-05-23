@@ -287,7 +287,7 @@ def save_meal():
 
     return jsonify({
         'success': True,
-        'message': 'Meal saved successfully',
+        'message': 'Meal added successfully',
         'meal': saved_meal.to_dict()
     }), 201
 
