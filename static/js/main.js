@@ -28,6 +28,7 @@ function showSuccess(message, elementId = 'successMessage') {
 async function apiRequest(url, method = 'GET', data = null) {
     const options = {
         method: method,
+        credentials: 'same-origin',
         headers: {
             'Content-Type': 'application/json',
         }

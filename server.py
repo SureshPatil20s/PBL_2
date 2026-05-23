@@ -1,31 +1,54 @@
 import os
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
-from models import db, User
 from datetime import timedelta
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+    set_access_cookies,
+    unset_jwt_cookies,
+    verify_jwt_in_request,
+)
+from flask_jwt_extended.exceptions import JWTExtendedException
+from jwt.exceptions import PyJWTError
+from models import db, User
 import secrets
 
 app = Flask(__name__)
 
-# Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///meal_planner.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = secrets.token_hex(32)
-app.config['SESSION_COOKIE_SECURE'] = False 
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', app.config['SECRET_KEY'])
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_COOKIE_SECURE'] = False
+app.config['JWT_COOKIE_HTTPONLY'] = True
+app.config['JWT_COOKIE_SAMESITE'] = 'Lax'
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 
 db.init_app(app)
+jwt = JWTManager(app)
 
 with app.app_context():
     db.create_all()
 
 
+def get_current_user_id():
+    """Return the current JWT identity if a valid JWT cookie exists."""
+    try:
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        return int(identity) if identity else None
+    except (JWTExtendedException, PyJWTError, ValueError):
+        return None
+
+
 @app.route('/')
 def home():
     """Home page route."""
-    is_logged_in = 'user_id' in session
+    is_logged_in = get_current_user_id() is not None
     return render_template('index.html', is_logged_in=is_logged_in)
 
 
@@ -33,7 +56,7 @@ def home():
 def login():
     """Login page and handler."""
     if request.method == 'GET':
-        if 'user_id' in session:
+        if get_current_user_id() is not None:
             return redirect(url_for('home'))
         return render_template('login.html')
     
@@ -47,10 +70,10 @@ def login():
     user = User.query.filter_by(username=username).first()
     
     if user and user.check_password(password):
-        session.permanent = True
-        session['user_id'] = user.id
-        session['username'] = user.username
-        return jsonify({'success': True, 'message': 'Login successful'})
+        access_token = create_access_token(identity=str(user.id))
+        response = jsonify({'success': True, 'message': 'Login successful'})
+        set_access_cookies(response, access_token)
+        return response
     
     return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
 
@@ -59,7 +82,7 @@ def login():
 def register():
     """Registration page and handler."""
     if request.method == 'GET':
-        if 'user_id' in session:
+        if get_current_user_id() is not None:
             return redirect(url_for('home'))
         return render_template('register.html')
     
@@ -91,12 +114,11 @@ def register():
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
-        
-        session.permanent = True
-        session['user_id'] = new_user.id
-        session['username'] = new_user.username
-        
-        return jsonify({'success': True, 'message': 'Registration successful'})
+
+        access_token = create_access_token(identity=str(new_user.id))
+        response = jsonify({'success': True, 'message': 'Registration successful'})
+        set_access_cookies(response, access_token)
+        return response
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': 'An error occurred during registration'}), 500
@@ -105,21 +127,27 @@ def register():
 @app.route('/logout')
 def logout():
     """Logout route."""
-    session.clear()
-    return redirect(url_for('home'))
+    response = redirect(url_for('home'))
+    unset_jwt_cookies(response)
+    return response
 
 
 @app.route('/api/user')
+@jwt_required(optional=True)
 def get_user_info():
     """Get current logged-in user info."""
-    if 'user_id' not in session:
+    user_id = get_jwt_identity()
+    if not user_id:
         return jsonify({'user': None})
-    
-    user = User.query.get(session['user_id'])
+
+    try:
+        user = db.session.get(User, int(user_id))
+    except (TypeError, ValueError):
+        return jsonify({'user': None})
+
     if user:
         return jsonify({'user': user.to_dict()})
-    
-    session.clear()
+
     return jsonify({'user': None})
 
 
